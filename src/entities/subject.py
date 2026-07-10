@@ -7,5 +7,6 @@ class Subject:
     name: str
     program: str
     objective: str
+    problemicCore: str
     didacticStrategies: str
     competencies: list[Competency]

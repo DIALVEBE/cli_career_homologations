@@ -4,9 +4,10 @@ from .human_action_dimensions import HumanActionDimensions
 
 @dataclass(frozen=True)
 class Competency:
-    learningResults: str
+    name: str
     humanActionDimensions: HumanActionDimensions
-    didacticActivities: str
+    learningResults: list[str]
+    contents: str
     time: str
-    deliverables: str
+    evaluationMechanisms: str
     didacticResources: str
