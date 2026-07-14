@@ -37,6 +37,8 @@ def main() -> None:
     analyze_parser.add_argument("--comparator", choices=["deterministic", "llamacpp"], default="deterministic")
     analyze_parser.add_argument("--llamacpp-url", default="http://127.0.0.1:8080/v1/chat/completions")
     analyze_parser.add_argument("--model", default="local-model")
+    analyze_parser.add_argument("--llamacpp-timeout", type=int, default=600)
+    analyze_parser.add_argument("--llamacpp-max-tokens", type=int, default=220)
     analyze_parser.add_argument("--candidate-limit", type=int)
     analyze_parser.add_argument("--output-json", type=Path, default=Path("data/reports/homologation_report.json"))
     analyze_parser.add_argument("--output-csv", type=Path, default=Path("data/reports/homologation_report.csv"))
@@ -52,6 +54,8 @@ def main() -> None:
     processed_parser.add_argument("--comparator", choices=["deterministic", "llamacpp"], default="deterministic")
     processed_parser.add_argument("--llamacpp-url", default="http://127.0.0.1:8080/v1/chat/completions")
     processed_parser.add_argument("--model", default="local-model")
+    processed_parser.add_argument("--llamacpp-timeout", type=int, default=600)
+    processed_parser.add_argument("--llamacpp-max-tokens", type=int, default=220)
     processed_parser.add_argument("--candidate-limit", type=int)
     processed_parser.add_argument("--output-json", type=Path, default=Path("data/reports/homologation_report.json"))
     processed_parser.add_argument("--output-csv", type=Path, default=Path("data/reports/homologation_report.csv"))
@@ -72,6 +76,8 @@ def main() -> None:
             args.comparator,
             args.llamacpp_url,
             args.model,
+            args.llamacpp_timeout,
+            args.llamacpp_max_tokens,
             args.candidate_limit,
         )
     elif args.command == "analyze-processed":
@@ -85,6 +91,8 @@ def main() -> None:
             args.comparator,
             args.llamacpp_url,
             args.model,
+            args.llamacpp_timeout,
+            args.llamacpp_max_tokens,
             args.candidate_limit,
         )
 
@@ -181,11 +189,13 @@ def _run_analyze(
     comparator_name: str,
     llamacpp_url: str,
     model: str,
+    llamacpp_timeout: int,
+    llamacpp_max_tokens: int,
     candidate_limit: int | None,
 ) -> None:
     source_subjects = _extract_subjects(source_root)
     target_subjects = _extract_subjects(target_root)
-    comparator = _build_comparator(comparator_name, llamacpp_url, model)
+    comparator = _build_comparator(comparator_name, llamacpp_url, model, llamacpp_timeout, llamacpp_max_tokens)
     preselect_limit = _preselect_limit(comparator_name, candidate_limit)
     report = analyze_homologation(
         source_subjects,
@@ -204,6 +214,8 @@ def _run_analyze(
         {
             "comparator": comparator_name,
             "model": model if comparator_name == "llamacpp" else None,
+            "llamacpp_timeout": llamacpp_timeout if comparator_name == "llamacpp" else None,
+            "llamacpp_max_tokens": llamacpp_max_tokens if comparator_name == "llamacpp" else None,
             "candidate_limit": preselect_limit,
         },
     )
@@ -243,11 +255,13 @@ def _run_analyze_processed(
     comparator_name: str,
     llamacpp_url: str,
     model: str,
+    llamacpp_timeout: int,
+    llamacpp_max_tokens: int,
     candidate_limit: int | None,
 ) -> None:
     source_subjects = load_subjects_from_processed_json(processed_json, source_prefix)
     target_subjects = load_subjects_from_processed_json(processed_json, target_prefix)
-    comparator = _build_comparator(comparator_name, llamacpp_url, model)
+    comparator = _build_comparator(comparator_name, llamacpp_url, model, llamacpp_timeout, llamacpp_max_tokens)
     preselect_limit = _preselect_limit(comparator_name, candidate_limit)
     report = analyze_homologation(
         source_subjects,
@@ -269,14 +283,27 @@ def _run_analyze_processed(
             "target_prefix": target_prefix,
             "comparator": comparator_name,
             "model": model if comparator_name == "llamacpp" else None,
+            "llamacpp_timeout": llamacpp_timeout if comparator_name == "llamacpp" else None,
+            "llamacpp_max_tokens": llamacpp_max_tokens if comparator_name == "llamacpp" else None,
             "candidate_limit": preselect_limit,
         },
     )
 
 
-def _build_comparator(comparator_name: str, llamacpp_url: str, model: str):
+def _build_comparator(
+    comparator_name: str,
+    llamacpp_url: str,
+    model: str,
+    llamacpp_timeout: int,
+    llamacpp_max_tokens: int,
+):
     if comparator_name == "llamacpp":
-        return LlamaCppSubjectComparator(endpoint_url=llamacpp_url, model=model)
+        return LlamaCppSubjectComparator(
+            endpoint_url=llamacpp_url,
+            model=model,
+            timeout_seconds=llamacpp_timeout,
+            max_tokens=llamacpp_max_tokens,
+        )
     return DeterministicSubjectComparator()
 
 

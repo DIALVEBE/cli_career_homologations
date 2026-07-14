@@ -2,15 +2,25 @@ from __future__ import annotations
 
 import json
 import re
+import socket
 from urllib import request
+from urllib.error import URLError
 
 from entities import Subject, SubjectMatch
 
 
 class LlamaCppSubjectComparator:
-    def __init__(self, endpoint_url: str, model: str) -> None:
+    def __init__(
+        self,
+        endpoint_url: str,
+        model: str,
+        timeout_seconds: int = 600,
+        max_tokens: int = 220,
+    ) -> None:
         self.endpoint_url = endpoint_url
         self.model = model
+        self.timeout_seconds = timeout_seconds
+        self.max_tokens = max_tokens
 
     def compare(self, source: Subject, target: Subject, threshold: float) -> SubjectMatch:
         payload = {
@@ -20,7 +30,8 @@ class LlamaCppSubjectComparator:
                     "role": "system",
                     "content": (
                         "Eres un evaluador academico. Compara dos espacios academicos "
-                        "para determinar si son homologables. Responde solo JSON valido."
+                        "para determinar si son homologables. Responde solo JSON valido, "
+                        "sin explicaciones y sin razonamiento paso a paso."
                     ),
                 },
                 {
@@ -29,7 +40,9 @@ class LlamaCppSubjectComparator:
                 },
             ],
             "temperature": 0.1,
-            "max_tokens": 700,
+            "max_tokens": self.max_tokens,
+            "response_format": {"type": "json_object"},
+            "chat_template_kwargs": {"enable_thinking": False},
         }
         response_payload = self._post(payload)
         content = response_payload["choices"][0]["message"]["content"]
@@ -55,8 +68,20 @@ class LlamaCppSubjectComparator:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with request.urlopen(http_request, timeout=180) as response:
-            return json.loads(response.read().decode("utf-8"))
+        try:
+            with request.urlopen(http_request, timeout=self.timeout_seconds) as response:
+                return json.loads(response.read().decode("utf-8"))
+        except socket.timeout as error:
+            raise TimeoutError(
+                "llama.cpp no respondio a tiempo. Prueba subir --llamacpp-timeout, "
+                "bajar --llamacpp-max-tokens, usar --candidate-limit 1, o arrancar "
+                "llama-server con --ctx-size 4096 para CPU."
+            ) from error
+        except URLError as error:
+            raise ConnectionError(
+                f"No se pudo conectar con llama.cpp en {self.endpoint_url}. "
+                "Verifica que llama-server este corriendo."
+            ) from error
 
 
 def _prompt(source: Subject, target: Subject, threshold: float) -> str:
@@ -67,6 +92,8 @@ Reglas:
 - score debe estar entre 0.0 y 1.0.
 - homologable si score >= {threshold}.
 - No inventes informacion que no este en los textos.
+- No uses razonamiento largo ni etiquetas <think>.
+- Maximo 2 evidencias y 2 riesgos.
 - Responde solo este JSON:
 {{
   "score": 0.0,
@@ -87,9 +114,9 @@ def _subject_context(subject: Subject) -> str:
         [
             f"Nombre: {_trim(subject.name, 300)}",
             f"Programa: {_trim(subject.program, 200)}",
-            f"Objetivo: {_trim(subject.objective, 1200)}",
-            f"Competencias y resultados: {_trim(_competency_text(subject), 1800)}",
-            f"Contenidos: {_trim(_contents_text(subject), 1800)}",
+            f"Objetivo: {_trim(subject.objective, 700)}",
+            f"Competencias y resultados: {_trim(_competency_text(subject), 900)}",
+            f"Contenidos: {_trim(_contents_text(subject), 900)}",
         ]
     )
 

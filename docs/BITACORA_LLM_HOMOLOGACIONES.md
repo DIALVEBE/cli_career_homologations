@@ -459,7 +459,13 @@ uv run homologations analyze-processed \
   --output-csv data/reports/sistemas_vs_diseno_llamacpp.csv
 ```
 
-Nota: en CPU puede ser lento. Para primeras pruebas se recomienda usar `--candidate-limit 1` o filtrar pocos syllabus.
+Nota: en CPU puede ser lento. Para primeras pruebas se recomienda usar `--candidate-limit 1` o filtrar pocos syllabus. Si aparece `TimeoutError`, usar:
+
+```bash
+--llamacpp-timeout 900 --llamacpp-max-tokens 120 --candidate-limit 1
+```
+
+Tambien se recomienda arrancar `llama-server` con `--ctx-size 4096` en CPU si `8192` queda lento o consume demasiada RAM.
 
 ### Fase 5: CLI
 

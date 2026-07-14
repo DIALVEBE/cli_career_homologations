@@ -6,6 +6,8 @@ def test_llamacpp_subject_comparator_maps_json_response_to_subject_match():
     comparator = FakeLlamaCppSubjectComparator(
         endpoint_url="http://localhost:8080/v1/chat/completions",
         model="local-model",
+        timeout_seconds=300,
+        max_tokens=120,
     )
 
     match = comparator.compare(
@@ -17,10 +19,15 @@ def test_llamacpp_subject_comparator_maps_json_response_to_subject_match():
     assert match.score == 0.72
     assert match.homologable is True
     assert match.evidence == ["Coinciden contenidos base.", "Riesgo: Falta comparar intensidad horaria."]
+    assert comparator.payload["max_tokens"] == 120
+    assert comparator.payload["chat_template_kwargs"] == {"enable_thinking": False}
 
 
 class FakeLlamaCppSubjectComparator(LlamaCppSubjectComparator):
+    payload: dict
+
     def _post(self, payload: dict) -> dict:
+        self.payload = payload
         return {
             "choices": [
                 {
