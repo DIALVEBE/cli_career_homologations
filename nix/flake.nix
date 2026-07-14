@@ -31,6 +31,7 @@
         uv
         ruff
         ty
+        gh
 
         libsForQt5.qt5.qtwayland
       ] ++ [
