@@ -23,6 +23,23 @@ def test_llamacpp_subject_comparator_maps_json_response_to_subject_match():
     assert comparator.payload["chat_template_kwargs"] == {"enable_thinking": False}
 
 
+def test_llamacpp_subject_comparator_falls_back_when_json_is_truncated():
+    comparator = TruncatedJsonLlamaCppSubjectComparator(
+        endpoint_url="http://localhost:8080/v1/chat/completions",
+        model="local-model",
+    )
+
+    match = comparator.compare(
+        _subject("Programación"),
+        _subject("Introducción a la Programación"),
+        threshold=0.40,
+    )
+
+    assert match.source_subject == "Programación"
+    assert "Fallback deterministico" in match.evidence[0]
+    assert "Respuesta parcial" in match.evidence[1]
+
+
 class FakeLlamaCppSubjectComparator(LlamaCppSubjectComparator):
     payload: dict
 
@@ -36,6 +53,22 @@ class FakeLlamaCppSubjectComparator(LlamaCppSubjectComparator):
                             '{"score": 0.72, '
                             '"evidence": ["Coinciden contenidos base."], '
                             '"risks": ["Falta comparar intensidad horaria."]}'
+                        )
+                    }
+                }
+            ]
+        }
+
+
+class TruncatedJsonLlamaCppSubjectComparator(LlamaCppSubjectComparator):
+    def _post(self, payload: dict) -> dict:
+        return {
+            "choices": [
+                {
+                    "message": {
+                        "content": (
+                            '{"score": 0.51, "evidence": ["Coincide en fundamentos de '
+                            'programacion'
                         )
                     }
                 }

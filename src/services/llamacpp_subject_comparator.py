@@ -7,6 +7,7 @@ from urllib import request
 from urllib.error import URLError
 
 from entities import Subject, SubjectMatch
+from .subject_similarity import subject_similarity
 
 
 class LlamaCppSubjectComparator:
@@ -15,7 +16,7 @@ class LlamaCppSubjectComparator:
         endpoint_url: str,
         model: str,
         timeout_seconds: int = 600,
-        max_tokens: int = 220,
+        max_tokens: int = 320,
     ) -> None:
         self.endpoint_url = endpoint_url
         self.model = model
@@ -46,7 +47,10 @@ class LlamaCppSubjectComparator:
         }
         response_payload = self._post(payload)
         content = response_payload["choices"][0]["message"]["content"]
-        parsed = _parse_json_object(content)
+        try:
+            parsed = _parse_json_object(content)
+        except ValueError as error:
+            return _fallback_match(source, target, threshold, str(error), content)
         score = _coerce_score(parsed.get("score", 0.0))
         evidence = _string_list(parsed.get("evidence", []))
         risks = _string_list(parsed.get("risks", []))
@@ -146,7 +150,10 @@ def _parse_json_object(content: str) -> dict:
         match = re.search(r"\{.*\}", content, re.DOTALL)
         if not match:
             raise ValueError("llama.cpp response did not contain a JSON object")
-        return json.loads(match.group(0))
+        try:
+            return json.loads(match.group(0))
+        except json.JSONDecodeError as error:
+            raise ValueError(f"llama.cpp response contained invalid JSON: {error.msg}") from error
 
 
 def _coerce_score(value) -> float:
@@ -158,3 +165,26 @@ def _string_list(value) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(item) for item in value if str(item).strip()]
+
+
+def _fallback_match(
+    source: Subject,
+    target: Subject,
+    threshold: float,
+    reason: str,
+    content: str,
+) -> SubjectMatch:
+    score, evidence = subject_similarity(source, target)
+    raw_preview = " ".join(content.split())[:180]
+    return SubjectMatch(
+        source_subject=source.name,
+        target_subject=target.name,
+        score=score,
+        homologable=score >= threshold,
+        threshold=threshold,
+        evidence=[
+            f"Fallback deterministico: respuesta llama.cpp invalida ({reason}).",
+            f"Respuesta parcial: {raw_preview}",
+            *evidence,
+        ],
+    )

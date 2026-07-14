@@ -462,10 +462,12 @@ uv run homologations analyze-processed \
 Nota: en CPU puede ser lento. Para primeras pruebas se recomienda usar `--candidate-limit 1` o filtrar pocos syllabus. Si aparece `TimeoutError`, usar:
 
 ```bash
---llamacpp-timeout 900 --llamacpp-max-tokens 120 --candidate-limit 1
+--llamacpp-timeout 900 --llamacpp-max-tokens 320 --candidate-limit 1
 ```
 
 Tambien se recomienda arrancar `llama-server` con `--ctx-size 4096` en CPU si `8192` queda lento o consume demasiada RAM.
+
+Si llama.cpp devuelve JSON incompleto o invalido, el analisis ya no se detiene: ese par usa fallback deterministico y deja evidencia en el reporte.
 
 ### Fase 5: CLI
 
