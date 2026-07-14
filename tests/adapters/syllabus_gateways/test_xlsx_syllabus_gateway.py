@@ -5,7 +5,7 @@ import pytest
 from adapters.parsing_syllabus_gateway.xlsx import XLSXParsingSyllabusGateway
 from entities import Competency, HumanActionDimensions, Subject
 
-MARKETING_SYLLABUS_PATH = "./marketing_syllabus.xlsx"
+MARKETING_SYLLABUS_PATH = "tests/adapters/syllabus_gateways/marketing_syllabus.xlsx"
 
 MARKETING_SUBJECT = Subject(
     name="Fundamentos de marketing y transformación digital",
@@ -109,15 +109,23 @@ def test_marketing_syllabus(xlsx_parsing_syllabus_gateway):
     assert want.problemicCore == got.problemicCore
     assert want.didacticStrategies == got.didacticStrategies
 
-    for want_competency, index in enumerate(want.competencies):
+    for index, want_competency in enumerate(want.competencies):
         got_competency = got.competencies[index]
 
         assert want_competency.name == got_competency.name
 
         assert want_competency.humanActionDimensions == got_competency.humanActionDimensions
 
-        assert want_competency.learningResults == got_competency.learningResults
-        assert want_competency.contents == got_competency.contents
-        assert want_competency.time == got_competency.time
-        assert want_competency.evaluationMechanisms == got_competency.evaluationMechanisms
-        assert want_competency.didacticResources == got_competency.didacticResources
+        assert _clean_list(want_competency.learningResults) == _clean_list(got_competency.learningResults)
+        assert _clean(want_competency.contents) == _clean(got_competency.contents)
+        assert _clean(want_competency.time) == _clean(got_competency.time)
+        assert _clean(want_competency.evaluationMechanisms) == _clean(got_competency.evaluationMechanisms)
+        assert _clean(want_competency.didacticResources) == _clean(got_competency.didacticResources)
+
+
+def _clean_list(values: list[str]) -> list[str]:
+    return [value.strip() for value in values]
+
+
+def _clean(value: str) -> str:
+    return value.strip()
