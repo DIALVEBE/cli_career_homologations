@@ -389,6 +389,23 @@ Salida esperada:
 
 - logica de homologacion independiente del modelo.
 
+Avance:
+
+- Se agregaron modelos de resultado:
+  - `SubjectMatch`
+  - `SubjectHomologationResult`
+  - `CareerHomologationReport`
+- Se agrego un comparador deterministico temporal basado en similitud textual.
+- Se agrego la regla de homologacion `score >= 0.40`.
+- Se agrego generacion de reportes JSON y CSV.
+- Se agrego comando:
+  - `homologations analyze <programa_origen> <programa_destino> --output-json ... --output-csv ...`
+- Prueba real ejecutada:
+  - origen: `data/raw/SYLLABUS_INGENIERIA_DE_SISTEMAS`
+  - destino: `data/raw/SYLLABUS_Diseño_De_Interaccion`
+  - resultado baseline: 25 materias origen, 56 materias destino, 1 homologable, 4% general.
+- Nota: este comparador es solo una base deterministica para validar la tuberia. La decision academica debe venir despues con LLM y revision humana.
+
 ### Fase 4: Comparador LLM
 
 - Crear interfaz `SubjectComparatorGateway`.
