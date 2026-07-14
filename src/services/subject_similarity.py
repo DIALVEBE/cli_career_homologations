@@ -76,9 +76,16 @@ def _text_similarity(left: str, right: str) -> float:
     intersection = len(left_tokens & right_tokens)
     union = len(left_tokens | right_tokens)
     jaccard = intersection / union
-    sequence = SequenceMatcher(None, left_normalized, right_normalized).ratio()
+    sequence = _sequence_similarity(left_normalized, right_normalized)
 
     return max(jaccard, sequence * 0.65)
+
+
+def _sequence_similarity(left: str, right: str) -> float:
+    max_length = 1200
+    if len(left) > max_length or len(right) > max_length:
+        return 0.0
+    return SequenceMatcher(None, left, right).ratio()
 
 
 def _tokens(value: str) -> list[str]:

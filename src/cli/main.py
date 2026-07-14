@@ -7,7 +7,13 @@ from pathlib import Path
 
 from adapters.parsing_syllabus_gateway.xlsx import XLSXParsingSyllabusGateway
 from entities import Subject
-from services import analyze_homologation, build_inventory, write_csv_report, write_json_report
+from services import (
+    analyze_homologation,
+    build_inventory,
+    load_subjects_from_processed_json,
+    write_csv_report,
+    write_json_report,
+)
 
 
 def main() -> None:
@@ -29,6 +35,17 @@ def main() -> None:
     analyze_parser.add_argument("--output-json", type=Path, default=Path("data/reports/homologation_report.json"))
     analyze_parser.add_argument("--output-csv", type=Path, default=Path("data/reports/homologation_report.csv"))
 
+    processed_parser = subparsers.add_parser(
+        "analyze-processed",
+        help="Analyze homologation compatibility from processed syllabus JSON.",
+    )
+    processed_parser.add_argument("processed_json", type=Path)
+    processed_parser.add_argument("source_prefix")
+    processed_parser.add_argument("target_prefix")
+    processed_parser.add_argument("--threshold", type=float, default=0.40)
+    processed_parser.add_argument("--output-json", type=Path, default=Path("data/reports/homologation_report.json"))
+    processed_parser.add_argument("--output-csv", type=Path, default=Path("data/reports/homologation_report.csv"))
+
     args = parser.parse_args()
 
     if args.command == "inventory":
@@ -37,6 +54,15 @@ def main() -> None:
         _run_extract_xlsx(Path(args.root), args.output)
     elif args.command == "analyze":
         _run_analyze(args.source_root, args.target_root, args.threshold, args.output_json, args.output_csv)
+    elif args.command == "analyze-processed":
+        _run_analyze_processed(
+            args.processed_json,
+            args.source_prefix,
+            args.target_prefix,
+            args.threshold,
+            args.output_json,
+            args.output_csv,
+        )
 
 
 def _run_inventory(root: Path, output: Path | None) -> None:
@@ -144,6 +170,41 @@ def _run_analyze(
                 "homologable_subjects": report.homologable_subjects,
                 "general_percentage": report.general_percentage,
                 "threshold": report.threshold,
+                "output_json": str(output_json),
+                "output_csv": str(output_csv),
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+    )
+
+
+def _run_analyze_processed(
+    processed_json: Path,
+    source_prefix: str,
+    target_prefix: str,
+    threshold: float,
+    output_json: Path,
+    output_csv: Path,
+) -> None:
+    source_subjects = load_subjects_from_processed_json(processed_json, source_prefix)
+    target_subjects = load_subjects_from_processed_json(processed_json, target_prefix)
+    report = analyze_homologation(source_subjects, target_subjects, threshold=threshold)
+
+    write_json_report(report, output_json)
+    write_csv_report(report, output_csv)
+
+    print(
+        json.dumps(
+            {
+                "source_subjects": report.total_source_subjects,
+                "target_subjects": len(target_subjects),
+                "homologable_subjects": report.homologable_subjects,
+                "general_percentage": report.general_percentage,
+                "threshold": report.threshold,
+                "processed_json": str(processed_json),
+                "source_prefix": source_prefix,
+                "target_prefix": target_prefix,
                 "output_json": str(output_json),
                 "output_csv": str(output_csv),
             },
