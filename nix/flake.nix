@@ -32,6 +32,7 @@
         ruff
         ty
         gh
+        llama-cpp
 
         libsForQt5.qt5.qtwayland
       ] ++ [

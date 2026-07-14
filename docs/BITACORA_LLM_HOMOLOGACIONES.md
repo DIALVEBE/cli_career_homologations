@@ -421,6 +421,46 @@ Salida esperada:
 - comparaciones reproducibles;
 - errores controlados cuando el modelo responde mal.
 
+Avance:
+
+- Se agrego el contrato `SubjectComparatorGateway`.
+- Se adapto el comparador deterministico al contrato.
+- Se agrego `LlamaCppSubjectComparator`, que llama a un endpoint OpenAI-compatible de `llama-server`.
+- Se agrego `llama-cpp` al shell Nix.
+- La CLI ahora acepta:
+  - `--comparator deterministic`
+  - `--comparator llamacpp`
+  - `--llamacpp-url`
+  - `--model`
+  - `--candidate-limit`
+- Para evitar demasiadas llamadas al modelo, el modo `llamacpp` preselecciona candidatos con el comparador deterministico. Por defecto usa 3 candidatos destino por materia origen.
+
+Arrancar modelo local con llama.cpp:
+
+```bash
+direnv exec . llama-server \
+  --hf-repo Qwen/Qwen3-4B-GGUF:Q4_K_M \
+  --host 127.0.0.1 \
+  --port 8080 \
+  --ctx-size 8192
+```
+
+Ejecutar analisis con llama.cpp:
+
+```bash
+uv run homologations analyze-processed \
+  data/processed/syllabus.json \
+  SYLLABUS_INGENIERIA_DE_SISTEMAS \
+  SYLLABUS_Diseño_De_Interaccion \
+  --comparator llamacpp \
+  --model Qwen/Qwen3-4B-GGUF:Q4_K_M \
+  --candidate-limit 3 \
+  --output-json data/reports/sistemas_vs_diseno_llamacpp.json \
+  --output-csv data/reports/sistemas_vs_diseno_llamacpp.csv
+```
+
+Nota: en CPU puede ser lento. Para primeras pruebas se recomienda usar `--candidate-limit 1` o filtrar pocos syllabus.
+
 ### Fase 5: CLI
 
 - Crear comando `homologations analyze`.
