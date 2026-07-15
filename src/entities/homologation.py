@@ -9,6 +9,8 @@ class SubjectMatch:
     homologable: bool
     threshold: float
     evidence: list[str]
+    source_credits: int | None = None
+    target_credits: int | None = None
 
 
 @dataclass(frozen=True)

@@ -9,6 +9,7 @@ from adapters.parsing_syllabus_gateway.xlsx import XLSXParsingSyllabusGateway
 from entities import Subject
 from services import (
     analyze_homologation,
+    academic_plan_subjects,
     build_inventory,
     DeterministicSubjectComparator,
     LlamaCppSubjectComparator,
@@ -60,6 +61,18 @@ def main() -> None:
     processed_parser.add_argument("--output-json", type=Path, default=Path("data/reports/homologation_report.json"))
     processed_parser.add_argument("--output-csv", type=Path, default=Path("data/reports/homologation_report.csv"))
 
+    plans_parser = subparsers.add_parser(
+        "analyze-plans",
+        help="Analyze homologation compatibility from study plan PDFs.",
+    )
+    plans_parser.add_argument("source_pdf", type=Path)
+    plans_parser.add_argument("target_pdf", type=Path)
+    plans_parser.add_argument("--source-program")
+    plans_parser.add_argument("--target-program")
+    plans_parser.add_argument("--threshold", type=float, default=0.40)
+    plans_parser.add_argument("--output-json", type=Path, default=Path("data/reports/homologation_plan_report.json"))
+    plans_parser.add_argument("--output-csv", type=Path, default=Path("data/reports/homologation_plan_report.csv"))
+
     args = parser.parse_args()
 
     if args.command == "inventory":
@@ -94,6 +107,16 @@ def main() -> None:
             args.llamacpp_timeout,
             args.llamacpp_max_tokens,
             args.candidate_limit,
+        )
+    elif args.command == "analyze-plans":
+        _run_analyze_plans(
+            args.source_pdf,
+            args.target_pdf,
+            args.source_program,
+            args.target_program,
+            args.threshold,
+            args.output_json,
+            args.output_csv,
         )
 
 
@@ -286,6 +309,38 @@ def _run_analyze_processed(
             "llamacpp_timeout": llamacpp_timeout if comparator_name == "llamacpp" else None,
             "llamacpp_max_tokens": llamacpp_max_tokens if comparator_name == "llamacpp" else None,
             "candidate_limit": preselect_limit,
+        },
+    )
+
+
+def _run_analyze_plans(
+    source_pdf: Path,
+    target_pdf: Path,
+    source_program: str | None,
+    target_program: str | None,
+    threshold: float,
+    output_json: Path,
+    output_csv: Path,
+) -> None:
+    source_subjects = academic_plan_subjects(source_pdf, source_program)
+    target_subjects = academic_plan_subjects(target_pdf, target_program)
+    report = analyze_homologation(
+        source_subjects,
+        target_subjects,
+        threshold=threshold,
+        comparator=DeterministicSubjectComparator(),
+    )
+
+    _write_and_print_report(
+        report,
+        len(target_subjects),
+        threshold,
+        output_json,
+        output_csv,
+        {
+            "source_pdf": str(source_pdf),
+            "target_pdf": str(target_pdf),
+            "comparator": "deterministic-credit-aware",
         },
     )
 

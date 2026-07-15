@@ -409,6 +409,20 @@ Avance:
 - La misma prueba desde `data/processed/syllabus.json` mantiene el resultado y evita reabrir Excel.
 - Nota: este comparador es solo una base deterministica para validar la tuberia. La decision academica debe venir despues con LLM y revision humana.
 
+Correccion importante:
+
+- Se agrego soporte para planes de estudio en PDF con extraccion de espacios academicos y creditos.
+- Se agrego comando:
+  - `homologations analyze-plans <plan_origen.pdf> <plan_destino.pdf> --source-program ... --target-program ...`
+- Regla de creditos:
+  - si el nombre del espacio academico es equivalente y los creditos de origen son mayores o iguales a los creditos destino, se homologa al 100%;
+  - si el nombre es equivalente pero origen tiene menos creditos que destino, no queda homologable por deficit de creditos;
+  - niveles diferentes como `Lengua extranjera I` vs `Lengua extranjera V` u `Optativa I` vs `Optativa II` no se consideran equivalencia directa.
+- Prueba real ejecutada con planes:
+  - origen: Ingenieria de Sistemas
+  - destino: Marketing y Transformacion Digital
+  - resultado: 48 espacios origen, 58 destino, 13 homologables, 27.08% general.
+
 ### Fase 4: Comparador LLM
 
 - Crear interfaz `SubjectComparatorGateway`.

@@ -32,7 +32,7 @@ STOPWORDS = {
 
 
 def subject_similarity(source: Subject, target: Subject) -> tuple[float, list[str]]:
-    name_score = _text_similarity(source.name, target.name)
+    name_score = normalized_name_similarity(source.name, target.name)
     objective_score = _text_similarity(source.objective, target.objective)
     competency_score = _text_similarity(_competency_text(source), _competency_text(target))
     contents_score = _text_similarity(_contents_text(source), _contents_text(target))
@@ -52,6 +52,10 @@ def subject_similarity(source: Subject, target: Subject) -> tuple[float, list[st
         f"Contenidos: {contents_score:.0%}",
     ]
     return round(score, 4), evidence
+
+
+def normalized_name_similarity(left: str, right: str) -> float:
+    return _text_similarity(left, right)
 
 
 def _apply_name_floor(score: float, name_score: float) -> float:

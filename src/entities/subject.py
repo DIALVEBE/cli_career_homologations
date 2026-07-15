@@ -10,3 +10,4 @@ class Subject:
     problemicCore: str
     didacticStrategies: str
     competencies: list[Competency]
+    credits: int | None = None
